@@ -7,3 +7,7 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
+hyper = { version = "0.14", features = ["full"] }
+tokio-util = "0.6"
+mime_guess = "2.0"
+url = "2.2.2"
