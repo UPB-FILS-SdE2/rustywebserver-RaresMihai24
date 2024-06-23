@@ -12,8 +12,8 @@ use url::form_urlencoded;
 use std::collections::HashMap;
 
 async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAddr) -> Result<Response<Body>, hyper::Error> {
-    let path = req.uri().path().trim_start_matches('/').to_string();
-    let full_path = root.join(&path);
+    let path = req.uri().path().to_string(); // Keep the leading slash
+    let full_path = root.join(path.trim_start_matches('/'));
     let method = req.method().clone();
     let (status_code, status_text);
 
@@ -172,7 +172,8 @@ async fn handle_script(req: Request<Body>, script_path: PathBuf) -> Result<Respo
 }
 
 fn log_request(method: &Method, path: &str, client_addr: &SocketAddr, status_code: StatusCode, status_text: &str) {
-    println!("{} {} {} -> {} ({})", method, client_addr, path, status_code.as_u16(), status_text);
+    let client_ip = client_addr.ip();
+    println!("{} {} {} -> {} ({})", method, client_ip, path, status_code.as_u16(), status_text);
 }
 
 #[tokio::main]
