@@ -44,21 +44,8 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
     }
 
     if req.method() == Method::GET {
-        if full_path.starts_with(root.join("scripts")) && path.ends_with("simple.sh") {
-            // Special case for simple.sh
-            let fixed_response = "Packet received\n";
-            let status_code = StatusCode::OK;
-            let status_text = "OK";
-            log_request(&method, &path, &client_addr, status_code, status_text);
-            return Ok(Response::builder()
-                .status(status_code)
-                .header("Content-Type", "text/plain; charset=utf-8")
-                .header("Content-Length", fixed_response.len().to_string())
-                .header("Connection", "close")
-                .body(Body::from(fixed_response))
-                .unwrap());
-        } else if full_path.starts_with(root.join("scripts")) {
-            // Handle other scripts
+        if full_path.starts_with(root.join("scripts")) {
+            // Handle all scripts
             let response = handle_script(req, full_path).await;
             if let Ok(ref res) = response {
                 let status_code = res.status();
