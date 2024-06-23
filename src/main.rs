@@ -173,11 +173,7 @@ async fn handle_script(req: Request<Body>, script_path: PathBuf) -> Result<Respo
                 StatusCode::INTERNAL_SERVER_ERROR
             };
 
-            let content_type = if status == StatusCode::OK {
-                "text/plain; charset=utf-8"
-            } else {
-                "text/plain"
-            };
+            let content_type = "text/plain; charset=utf-8";
 
             return Ok(Response::builder()
                 .status(status)
@@ -202,11 +198,7 @@ async fn handle_script(req: Request<Body>, script_path: PathBuf) -> Result<Respo
             StatusCode::INTERNAL_SERVER_ERROR
         };
 
-        let content_type = if status == StatusCode::OK {
-            "text/plain; charset=utf-8"
-        } else {
-            "text/plain"
-        };
+        let content_type = "text/plain; charset=utf-8";
 
         return Ok(Response::builder()
             .status(status)
