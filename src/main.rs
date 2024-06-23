@@ -7,7 +7,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::Command as TokioCommand;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server, StatusCode, Method};
-use mime_guess::from_path;
+use mime_guess::{from_path, mime};
 use url::form_urlencoded;
 use std::collections::HashMap;
 
