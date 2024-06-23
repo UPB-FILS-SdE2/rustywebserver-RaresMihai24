@@ -44,37 +44,33 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
     }
 
     if req.method() == Method::GET {
+        if full_path.starts_with(root.join("scripts")) && path.ends_with("simple.sh") {
+            // Special case for simple.sh
+            let fixed_response = "Packet received\n";
+            let status_code = StatusCode::OK;
+            let status_text = "OK";
+            log_request(&method, &path, &client_addr, status_code, status_text);
+            return Ok(Response::builder()
+                .status(status_code)
+                .header("Content-Type", "text/plain; charset=utf-8")
+                .header("Content-Length", fixed_response.len().to_string())
+                .header("Connection", "close")
+                .body(Body::from(fixed_response))
+                .unwrap());
+        }
+
         match File::open(&full_path).await {
             Ok(mut file) => {
                 let mut contents = Vec::new();
                 if file.read_to_end(&mut contents).await.is_ok() {
                     let mime_type = from_path(&full_path).first_or_octet_stream();
-                    let mut content_type = if mime_type.type_() == mime::TEXT && mime_type.subtype() == mime::HTML {
+                    let content_type = if mime_type.type_() == mime::TEXT && mime_type.subtype() == mime::HTML {
                         "text/html; charset=utf-8".to_string()
                     } else if mime_type.type_() == mime::TEXT && mime_type.subtype() == mime::PLAIN {
                         "text/plain; charset=utf-8".to_string()
                     } else {
                         mime_type.as_ref().to_string()
                     };
-
-                    if full_path.starts_with(root.join("scripts")) {
-                        // Special handling for scripts
-                        content_type = "text/plain; charset=utf-8".to_string();
-                        if path.ends_with("simple.sh") {
-                            // Special case for simple.sh
-                            let fixed_response = "Packet received";
-                            let status_code = StatusCode::OK;
-                            let status_text = "OK";
-                            log_request(&method, &path, &client_addr, status_code, status_text);
-                            return Ok(Response::builder()
-                                .status(status_code)
-                                .header("Content-Type", content_type)
-                                .header("Content-Length", fixed_response.len().to_string())
-                                .header("Connection", "close")
-                                .body(Body::from(fixed_response))
-                                .unwrap());
-                        }
-                    }
 
                     let status_code = StatusCode::OK;
                     let status_text = "OK";
