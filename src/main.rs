@@ -1,13 +1,13 @@
 use std::env;
 use std::net::SocketAddr;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Stdio;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::Command as TokioCommand;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server, StatusCode, Method};
-use mime_guess::{from_path, mime};
+use mime_guess::from_path;
 use url::form_urlencoded;
 use std::collections::HashMap;
 
@@ -86,7 +86,7 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
                     let content_type = if mime_type.type_() == mime::TEXT && mime_type.subtype() == mime::HTML {
                         "text/html; charset=utf-8".to_string()
                     } else if mime_type.type_() == mime::TEXT && mime_type.subtype() == mime::PLAIN {
-                        "text/plain".to_string() // Ensure plain text is set without charset
+                        "text/plain; charset=utf-8".to_string()
                     } else {
                         mime_type.as_ref().to_string()
                     };
