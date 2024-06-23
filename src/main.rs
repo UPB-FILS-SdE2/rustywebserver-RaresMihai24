@@ -96,17 +96,25 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
     }
 
     if full_path.starts_with(root.join("scripts")) && full_path.is_file() {
+        let method = req.method().clone();
+        let uri_path = req.uri().path().to_string();
         let response = handle_script(req, full_path).await;
         if let Ok(ref res) = response {
-            status_code = res.status();
-            status_text = res.status().canonical_reason().unwrap_or("Unknown");
+            let status_code = res.status();
+            let status_text = res.status().canonical_reason().unwrap_or("Unknown");
+            log_request(&method, &uri_path, &client_addr, status_code, status_text);
+            return response;
         } else {
-            status_code = StatusCode::INTERNAL_SERVER_ERROR;
-            status_text = "Internal Server Error";
-            message = "Internal Server Error";
+            let status_code = StatusCode::INTERNAL_SERVER_ERROR;
+            let status_text = "Internal Server Error";
+            let message = "Internal Server Error";
+            log_request(&method, &uri_path, &client_addr, status_code, status_text);
+            return Ok(Response::builder()
+                .status(status_code)
+                .header("Connection", "close")
+                .body(Body::from(message))
+                .unwrap());
         }
-        log_request(&method, &path, &client_addr, status_code, status_text);
-        return response;
     }
 
     status_code = StatusCode::METHOD_NOT_ALLOWED;
@@ -165,8 +173,16 @@ async fn handle_script(req: Request<Body>, script_path: PathBuf) -> Result<Respo
                 StatusCode::INTERNAL_SERVER_ERROR
             };
 
+            let content_type = if status == StatusCode::OK {
+                "text/plain; charset=utf-8"
+            } else {
+                "text/plain"
+            };
+
             return Ok(Response::builder()
                 .status(status)
+                .header("Content-Type", content_type)
+                .header("Content-Length", response_body.len().to_string())
                 .header("Connection", "close")
                 .body(Body::from(response_body))
                 .unwrap());
@@ -186,8 +202,16 @@ async fn handle_script(req: Request<Body>, script_path: PathBuf) -> Result<Respo
             StatusCode::INTERNAL_SERVER_ERROR
         };
 
+        let content_type = if status == StatusCode::OK {
+            "text/plain; charset=utf-8"
+        } else {
+            "text/plain"
+        };
+
         return Ok(Response::builder()
             .status(status)
+            .header("Content-Type", content_type)
+            .header("Content-Length", response_body.len().to_string())
             .header("Connection", "close")
             .body(Body::from(response_body))
             .unwrap());
