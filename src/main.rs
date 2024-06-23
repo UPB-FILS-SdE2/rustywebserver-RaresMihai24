@@ -57,6 +57,25 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
                 .header("Connection", "close")
                 .body(Body::from(fixed_response))
                 .unwrap());
+        } else if full_path.starts_with(root.join("scripts")) && path.ends_with("get-env") {
+            // Handle get-env script
+            let response = handle_script(req, full_path).await;
+            if let Ok(ref res) = response {
+                let status_code = res.status();
+                let status_text = res.status().canonical_reason().unwrap_or("Unknown");
+                log_request(&method, &path, &client_addr, status_code, status_text);
+                return response;
+            } else {
+                let status_code = StatusCode::INTERNAL_SERVER_ERROR;
+                let status_text = "Internal Server Error";
+                let message = "Internal Server Error";
+                log_request(&method, &path, &client_addr, status_code, status_text);
+                return Ok(Response::builder()
+                    .status(status_code)
+                    .header("Connection", "close")
+                    .body(Body::from(message))
+                    .unwrap());
+            }
         }
 
         match File::open(&full_path).await {
