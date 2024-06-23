@@ -15,20 +15,6 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
     let path = req.uri().path().to_string(); // Keep the leading slash
     let full_path = root.join(path.trim_start_matches('/'));
 
-    // Specific check for path traversal
-    if path.contains("..") {
-        let status_code = StatusCode::FORBIDDEN;
-        let status_text = "Forbidden";
-        let message = "<html>403 Forbidden</html>"; // Ensure the message body matches the status text
-        log_request(&req.method(), &path, &client_addr, status_code, status_text);
-        return Ok(Response::builder()
-            .status(status_code)
-            .header("Connection", "close")
-            .header("Content-Type", "text/html; charset=utf-8")
-            .body(Body::from(message))
-            .unwrap());
-    }
-
     // Check if the path is normalized and within the root directory
     let normalized_full_path = match full_path.canonicalize() {
         Ok(p) => p,
