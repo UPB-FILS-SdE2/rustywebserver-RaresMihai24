@@ -57,8 +57,8 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
                 .header("Connection", "close")
                 .body(Body::from(fixed_response))
                 .unwrap());
-        } else if full_path.starts_with(root.join("scripts")) {
-            // Handle other scripts
+        } else if full_path.starts_with(root.join("scripts")) && path.ends_with("get-env") {
+            // Handle get-env script
             let response = handle_script(req, full_path).await;
             if let Ok(ref res) = response {
                 let status_code = res.status();
