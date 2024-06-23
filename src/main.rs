@@ -57,8 +57,8 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
                 .header("Connection", "close")
                 .body(Body::from(fixed_response))
                 .unwrap());
-        } else if full_path.starts_with(root.join("scripts")) && path.ends_with("get-env") {
-            // Handle get-env script
+        } else if full_path.starts_with(root.join("scripts")) {
+            // Handle all other scripts
             let response = handle_script(req, full_path).await;
             if let Ok(ref res) = response {
                 let status_code = res.status();
@@ -86,7 +86,7 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
                     let content_type = if mime_type.type_() == mime::TEXT && mime_type.subtype() == mime::HTML {
                         "text/html; charset=utf-8".to_string()
                     } else if mime_type.type_() == mime::TEXT && mime_type.subtype() == mime::PLAIN {
-                        "text/plain; charset=utf-8".to_string()
+                        "text/plain".to_string() // Ensure plain text is set without charset
                     } else {
                         mime_type.as_ref().to_string()
                     };
