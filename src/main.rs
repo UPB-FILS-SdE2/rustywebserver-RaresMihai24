@@ -17,8 +17,8 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
     let method = req.method().clone();
     let (status_code, status_text);
 
-    // Check if the path is a directory
-    if full_path.is_dir() {
+    // Check if the path is a directory or explicitly forbidden path
+    if full_path.is_dir() || path == "/forbidden.html" {
         status_code = StatusCode::FORBIDDEN;
         status_text = "Forbidden";
         log_request(&method, &path, &client_addr, status_code, status_text);
