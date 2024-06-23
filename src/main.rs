@@ -17,19 +17,6 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
     let method = req.method().clone();
     let (status_code, status_text);
 
-    if full_path.starts_with(root.join("scripts")) && full_path.is_file() {
-        let response = handle_script(req, full_path).await;
-        if let Ok(ref res) = response {
-            status_code = res.status();
-            status_text = res.status().canonical_reason().unwrap_or("Unknown");
-        } else {
-            status_code = StatusCode::INTERNAL_SERVER_ERROR;
-            status_text = "Internal Server Error";
-        }
-        log_request(&method, &path, &client_addr, status_code, status_text);
-        return response;
-    }
-
     if req.method() == Method::GET {
         if full_path.is_dir() {
             status_code = StatusCode::FORBIDDEN;
@@ -37,6 +24,7 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
             log_request(&method, &path, &client_addr, status_code, status_text);
             return Ok(Response::builder()
                 .status(status_code)
+                .header("Connection", "close")
                 .body(Body::from(status_text))
                 .unwrap());
         }
@@ -69,6 +57,7 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
                     log_request(&method, &path, &client_addr, status_code, status_text);
                     return Ok(Response::builder()
                         .status(status_code)
+                        .header("Connection", "close")
                         .body(Body::from(status_text))
                         .unwrap());
                 }
@@ -79,10 +68,24 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
                 log_request(&method, &path, &client_addr, status_code, status_text);
                 return Ok(Response::builder()
                     .status(status_code)
+                    .header("Connection", "close")
                     .body(Body::from(status_text))
                     .unwrap());
             },
         }
+    }
+
+    if full_path.starts_with(root.join("scripts")) && full_path.is_file() {
+        let response = handle_script(req, full_path).await;
+        if let Ok(ref res) = response {
+            status_code = res.status();
+            status_text = res.status().canonical_reason().unwrap_or("Unknown");
+        } else {
+            status_code = StatusCode::INTERNAL_SERVER_ERROR;
+            status_text = "Internal Server Error";
+        }
+        log_request(&method, &path, &client_addr, status_code, status_text);
+        return response;
     }
 
     status_code = StatusCode::METHOD_NOT_ALLOWED;
@@ -90,6 +93,7 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
     log_request(&method, &path, &client_addr, status_code, status_text);
     Ok(Response::builder()
         .status(status_code)
+        .header("Connection", "close")
         .body(Body::from(status_text))
         .unwrap())
 }
@@ -169,6 +173,7 @@ async fn handle_script(req: Request<Body>, script_path: PathBuf) -> Result<Respo
 
     Ok(Response::builder()
         .status(StatusCode::INTERNAL_SERVER_ERROR)
+        .header("Connection", "close")
         .body(Body::from("Failed to execute script"))
         .unwrap())
 }
