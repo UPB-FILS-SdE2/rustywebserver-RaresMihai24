@@ -18,14 +18,27 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
     let (status_code, status_text, message);
 
     // Check if the path is a directory or explicitly forbidden path
-    if full_path.is_dir() || path == "/forbidden.html" {
+    if full_path.is_dir() {
         status_code = StatusCode::FORBIDDEN;
         status_text = "Forbidden";
-        message = "Forbidden"; // Ensure the message body matches the status text
+        message = "<html>403 Forbidden</html>"; // Ensure the message body matches the status text
         log_request(&method, &path, &client_addr, status_code, status_text);
         return Ok(Response::builder()
             .status(status_code)
             .header("Connection", "close")
+            .body(Body::from(message))
+            .unwrap());
+    }
+
+    if path == "/forbidden.html" {
+        status_code = StatusCode::FORBIDDEN;
+        status_text = "Forbidden";
+        message = "<html>403 Forbidden</html>";
+        log_request(&method, &path, &client_addr, status_code, status_text);
+        return Ok(Response::builder()
+            .status(status_code)
+            .header("Connection", "close")
+            .header("Content-Type", "text/html; charset=utf-8")
             .body(Body::from(message))
             .unwrap());
     }
