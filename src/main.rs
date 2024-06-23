@@ -89,7 +89,7 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
                     let content_type = if mime_type.type_() == mime::TEXT && mime_type.subtype() == mime::HTML {
                         "text/html; charset=utf-8".to_string()
                     } else if mime_type.type_() == mime::TEXT && mime_type.subtype() == mime::PLAIN {
-                        "text/plain; charset=utf-8".to_string()
+                        "text/plain".to_string() // Ensure plain text is set without charset
                     } else {
                         mime_type.as_ref().to_string()
                     };
@@ -209,7 +209,7 @@ async fn handle_script(req: Request<Body>, script_path: PathBuf) -> Result<Respo
                 StatusCode::INTERNAL_SERVER_ERROR
             };
 
-            let content_type = "text/plain; charset=utf-8";
+            let content_type = "text/plain";
 
             return Ok(Response::builder()
                 .status(status)
@@ -234,7 +234,7 @@ async fn handle_script(req: Request<Body>, script_path: PathBuf) -> Result<Respo
             StatusCode::INTERNAL_SERVER_ERROR
         };
 
-        let content_type = "text/plain; charset=utf-8";
+        let content_type = "text/plain";
 
         return Ok(Response::builder()
             .status(status)
