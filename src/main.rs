@@ -46,7 +46,9 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
                 let mut contents = Vec::new();
                 if file.read_to_end(&mut contents).await.is_ok() {
                     let mime_type = from_path(&full_path).first_or_octet_stream();
-                    let content_type = if mime_type.type_() == mime::TEXT && mime_type.subtype() == mime::PLAIN {
+                    let content_type = if mime_type.type_() == mime::TEXT && mime_type.subtype() == mime::HTML {
+                        "text/html; charset=utf-8"
+                    } else if mime_type.type_() == mime::TEXT && mime_type.subtype() == mime::PLAIN {
                         "text/plain; charset=utf-8"
                     } else {
                         mime_type.as_ref()
