@@ -11,6 +11,7 @@ use mime_guess::from_path;
 use url::form_urlencoded;
 use std::collections::HashMap;
 
+
 async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAddr) -> Result<Response<Body>, hyper::Error> {
     let path = req.uri().path().trim_start_matches('/').to_string();
     let full_path = root.join(&path);
