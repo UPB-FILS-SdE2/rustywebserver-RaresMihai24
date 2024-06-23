@@ -17,18 +17,19 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
     let method = req.method().clone();
     let (status_code, status_text);
 
-    if req.method() == Method::GET {
-        if full_path.is_dir() {
-            status_code = StatusCode::FORBIDDEN;
-            status_text = "Forbidden";
-            log_request(&method, &path, &client_addr, status_code, status_text);
-            return Ok(Response::builder()
-                .status(status_code)
-                .header("Connection", "close")
-                .body(Body::from(status_text))
-                .unwrap());
-        }
+    // Check if the path is a directory
+    if full_path.is_dir() {
+        status_code = StatusCode::FORBIDDEN;
+        status_text = "Forbidden";
+        log_request(&method, &path, &client_addr, status_code, status_text);
+        return Ok(Response::builder()
+            .status(status_code)
+            .header("Connection", "close")
+            .body(Body::from(status_text))
+            .unwrap());
+    }
 
+    if req.method() == Method::GET {
         match File::open(&full_path).await {
             Ok(mut file) => {
                 let mut contents = Vec::new();
