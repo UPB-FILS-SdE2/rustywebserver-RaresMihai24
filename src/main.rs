@@ -11,7 +11,6 @@ use mime_guess::{from_path, mime};
 use url::form_urlencoded;
 use std::collections::HashMap;
 
-
 async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAddr) -> Result<Response<Body>, hyper::Error> {
     let path = req.uri().path().trim_start_matches('/').to_string();
     let full_path = root.join(&path);
@@ -94,16 +93,17 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
 }
 
 async fn handle_script(req: Request<Body>, script_path: PathBuf) -> Result<Response<Body>, hyper::Error> {
-    let method = req.method().to_string();
-    let path = req.uri().path().to_string();
+    let (parts, body) = req.into_parts();
+    let method = parts.method.to_string();
+    let path = parts.uri.path().to_string();
 
-    let mut env_vars: HashMap<String, String> = req.headers().iter()
+    let mut env_vars: HashMap<String, String> = parts.headers.iter()
         .map(|(key, value)| (key.to_string(), value.to_str().unwrap_or("").to_string()))
         .collect();
     env_vars.insert("Method".to_string(), method);
     env_vars.insert("Path".to_string(), path);
 
-    if let Some(query) = req.uri().query() {
+    if let Some(query) = parts.uri.query() {
         for (key, value) in form_urlencoded::parse(query.as_bytes()) {
             env_vars.insert(format!("Query_{}", key), value.to_string());
         }
@@ -112,8 +112,8 @@ async fn handle_script(req: Request<Body>, script_path: PathBuf) -> Result<Respo
     let mut cmd = TokioCommand::new(&script_path);
     cmd.envs(&env_vars);
 
-    if *req.method() == Method::POST {
-        if let Ok(body) = hyper::body::to_bytes(req.into_body()).await {
+    if parts.method == Method::POST {
+        if let Ok(body_bytes) = hyper::body::to_bytes(body).await {
             cmd.stdin(Stdio::piped());
             cmd.stdout(Stdio::piped());
             cmd.stderr(Stdio::piped());
@@ -121,7 +121,7 @@ async fn handle_script(req: Request<Body>, script_path: PathBuf) -> Result<Respo
             let mut child = cmd.spawn().expect("Failed to execute script");
             let mut stdin = child.stdin.take().expect("Failed to open stdin");
             tokio::spawn(async move {
-                stdin.write_all(&body).await.expect("Failed to write to stdin");
+                stdin.write_all(&body_bytes).await.expect("Failed to write to stdin");
             });
 
             let output = child.wait_with_output().await.expect("Failed to read stdout");
@@ -202,7 +202,6 @@ async fn main() {
         }
     });
 
-    
     let server = Server::bind(&addr).serve(make_svc);
 
     if let Err(e) = server.await {
