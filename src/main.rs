@@ -1,6 +1,6 @@
 use std::env;
 use std::net::SocketAddr;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -17,8 +17,8 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
     let method = req.method().clone();
     let (status_code, status_text, message);
 
-    // Check if the path is a directory or explicitly forbidden path
-    if full_path.is_dir() {
+    // Check if the path is trying to access outside the root directory or is a directory
+    if full_path.is_dir() || !full_path.starts_with(&root) {
         status_code = StatusCode::FORBIDDEN;
         status_text = "Forbidden";
         message = "<html>403 Forbidden</html>"; // Ensure the message body matches the status text
@@ -26,6 +26,7 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
         return Ok(Response::builder()
             .status(status_code)
             .header("Connection", "close")
+            .header("Content-Type", "text/html; charset=utf-8")
             .body(Body::from(message))
             .unwrap());
     }
