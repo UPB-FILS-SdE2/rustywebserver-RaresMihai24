@@ -81,11 +81,12 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
             Err(_) => {
                 status_code = StatusCode::NOT_FOUND;
                 status_text = "Not Found";
-                message = "Not Found";
+                message = "<html>404 Not Found</html>";
                 log_request(&method, &path, &client_addr, status_code, status_text);
                 return Ok(Response::builder()
                     .status(status_code)
                     .header("Connection", "close")
+                    .header("Content-Type", "text/html; charset=utf-8")
                     .body(Body::from(message))
                     .unwrap());
             },
