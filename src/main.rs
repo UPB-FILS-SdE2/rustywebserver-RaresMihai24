@@ -64,6 +64,7 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
                     return Ok(Response::builder()
                         .status(status_code)
                         .header("Content-Type", content_type)
+                        .header("Content-Length", contents.len().to_string())
                         .header("Connection", "close")
                         .body(Body::from(contents))
                         .unwrap());
