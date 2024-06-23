@@ -7,7 +7,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::Command as TokioCommand;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server, StatusCode, Method};
-use mime_guess::from_path;
+use mime_guess::{from_path, mime};
 use url::form_urlencoded;
 use std::collections::HashMap;
 
@@ -47,12 +47,18 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
                 let mut contents = Vec::new();
                 if file.read_to_end(&mut contents).await.is_ok() {
                     let mime_type = from_path(&full_path).first_or_octet_stream();
+                    let content_type = if mime_type.type_() == mime::TEXT && mime_type.subtype() == mime::PLAIN {
+                        "text/plain; charset=utf-8"
+                    } else {
+                        mime_type.as_ref()
+                    };
+
                     status_code = StatusCode::OK;
                     status_text = "OK";
                     log_request(&method, &path, &client_addr, status_code, status_text);
                     return Ok(Response::builder()
                         .status(status_code)
-                        .header("Content-Type", mime_type.as_ref())
+                        .header("Content-Type", content_type)
                         .header("Connection", "close")
                         .body(Body::from(contents))
                         .unwrap());
@@ -165,8 +171,8 @@ async fn handle_script(req: Request<Body>, script_path: PathBuf) -> Result<Respo
         .unwrap())
 }
 
-fn log_request(_method: &Method, path: &str, client_addr: &SocketAddr, status_code: StatusCode, status_text: &str) {
-    println!("$Request {} {} -> {} ({})", client_addr, path, status_code.as_u16(), status_text);
+fn log_request(method: &Method, path: &str, client_addr: &SocketAddr, status_code: StatusCode, status_text: &str) {
+    println!("{} {} {} -> {} ({})", method, client_addr, path, status_code.as_u16(), status_text);
 }
 
 #[tokio::main]
