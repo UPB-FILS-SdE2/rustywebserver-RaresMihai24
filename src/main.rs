@@ -14,15 +14,18 @@ use std::collections::HashMap;
 async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAddr) -> Result<Response<Body>, hyper::Error> {
     let path = req.uri().path().to_string(); // Keep the leading slash
     let full_path = root.join(path.trim_start_matches('/'));
-    let method = req.method().clone();
-    let (status_code, status_text, message);
 
-    // Check if the path is trying to access outside the root directory or is a directory
-    if full_path.is_dir() || !full_path.starts_with(&root) {
-        status_code = StatusCode::FORBIDDEN;
-        status_text = "Forbidden";
-        message = "<html>403 Forbidden</html>"; // Ensure the message body matches the status text
-        log_request(&method, &path, &client_addr, status_code, status_text);
+    // Check if the path is normalized and within the root directory
+    let normalized_full_path = match full_path.canonicalize() {
+        Ok(p) => p,
+        Err(_) => root.join("invalid_path"), // Use a dummy path to ensure it's handled as forbidden
+    };
+
+    if !normalized_full_path.starts_with(&root) || normalized_full_path.is_dir() {
+        let status_code = StatusCode::FORBIDDEN;
+        let status_text = "Forbidden";
+        let message = "<html>403 Forbidden</html>"; // Ensure the message body matches the status text
+        log_request(&req.method(), &path, &client_addr, status_code, status_text);
         return Ok(Response::builder()
             .status(status_code)
             .header("Connection", "close")
@@ -32,10 +35,10 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
     }
 
     if path == "/forbidden.html" {
-        status_code = StatusCode::FORBIDDEN;
-        status_text = "Forbidden";
-        message = "<html>403 Forbidden</html>";
-        log_request(&method, &path, &client_addr, status_code, status_text);
+        let status_code = StatusCode::FORBIDDEN;
+        let status_text = "Forbidden";
+        let message = "<html>403 Forbidden</html>";
+        log_request(&req.method(), &path, &client_addr, status_code, status_text);
         return Ok(Response::builder()
             .status(status_code)
             .header("Connection", "close")
@@ -58,9 +61,9 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
                         mime_type.as_ref()
                     };
 
-                    status_code = StatusCode::OK;
-                    status_text = "OK";
-                    log_request(&method, &path, &client_addr, status_code, status_text);
+                    let status_code = StatusCode::OK;
+                    let status_text = "OK";
+                    log_request(&req.method(), &path, &client_addr, status_code, status_text);
                     return Ok(Response::builder()
                         .status(status_code)
                         .header("Content-Type", content_type)
@@ -68,10 +71,10 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
                         .body(Body::from(contents))
                         .unwrap());
                 } else {
-                    status_code = StatusCode::INTERNAL_SERVER_ERROR;
-                    status_text = "Internal Server Error";
-                    message = "Internal Server Error";
-                    log_request(&method, &path, &client_addr, status_code, status_text);
+                    let status_code = StatusCode::INTERNAL_SERVER_ERROR;
+                    let status_text = "Internal Server Error";
+                    let message = "Internal Server Error";
+                    log_request(&req.method(), &path, &client_addr, status_code, status_text);
                     return Ok(Response::builder()
                         .status(status_code)
                         .header("Connection", "close")
@@ -80,10 +83,10 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
                 }
             },
             Err(_) => {
-                status_code = StatusCode::NOT_FOUND;
-                status_text = "Not Found";
-                message = "<html>404 Not Found</html>";
-                log_request(&method, &path, &client_addr, status_code, status_text);
+                let status_code = StatusCode::NOT_FOUND;
+                let status_text = "Not Found";
+                let message = "<html>404 Not Found</html>";
+                log_request(&req.method(), &path, &client_addr, status_code, status_text);
                 return Ok(Response::builder()
                     .status(status_code)
                     .header("Connection", "close")
@@ -95,23 +98,31 @@ async fn handle_request(req: Request<Body>, root: PathBuf, client_addr: SocketAd
     }
 
     if full_path.starts_with(root.join("scripts")) && full_path.is_file() {
+        let method = req.method().clone();
+        let uri_path = req.uri().path().to_string();
         let response = handle_script(req, full_path).await;
         if let Ok(ref res) = response {
-            status_code = res.status();
-            status_text = res.status().canonical_reason().unwrap_or("Unknown");
+            let status_code = res.status();
+            let status_text = res.status().canonical_reason().unwrap_or("Unknown");
+            log_request(&method, &uri_path, &client_addr, status_code, status_text);
+            return response;
         } else {
-            status_code = StatusCode::INTERNAL_SERVER_ERROR;
-            status_text = "Internal Server Error";
-            message = "Internal Server Error";
+            let status_code = StatusCode::INTERNAL_SERVER_ERROR;
+            let status_text = "Internal Server Error";
+            let message = "Internal Server Error";
+            log_request(&method, &uri_path, &client_addr, status_code, status_text);
+            return Ok(Response::builder()
+                .status(status_code)
+                .header("Connection", "close")
+                .body(Body::from(message))
+                .unwrap());
         }
-        log_request(&method, &path, &client_addr, status_code, status_text);
-        return response;
     }
 
-    status_code = StatusCode::METHOD_NOT_ALLOWED;
-    status_text = "Method Not Allowed";
-    message = "Method Not Allowed";
-    log_request(&method, &path, &client_addr, status_code, status_text);
+    let status_code = StatusCode::METHOD_NOT_ALLOWED;
+    let status_text = "Method Not Allowed";
+    let message = "Method Not Allowed";
+    log_request(&req.method(), &path, &client_addr, status_code, status_text);
     Ok(Response::builder()
         .status(status_code)
         .header("Connection", "close")
